@@ -12,7 +12,9 @@ module Ouroboros.Network.Mux
   , MiniProtocolLimits (..)
   , RunMiniProtocol (..)
   , MuxPeer (..)
+  , runMuxPeer
   , toApplication
+  , ouroborosProtocols
   , RunOrStop (..)
   , ScheduledStop
   , neverStop
@@ -123,7 +125,6 @@ toApplication connectionId scheduleStop (OuroborosApplication ptcls) =
         Mux.miniProtocolRun    = toMuxRunMiniProtocol (miniProtocolRun ptcl)
       }
     | ptcl <- ptcls connectionId scheduleStop ]
-  where
 
 toMuxRunMiniProtocol :: forall mode m a b.
                         (MonadCatch m, MonadAsync m)
@@ -136,6 +137,20 @@ toMuxRunMiniProtocol (ResponderProtocolOnly r) =
 toMuxRunMiniProtocol (InitiatorAndResponderProtocol i r) =
   Mux.InitiatorAndResponderProtocol (runMuxPeer i . fromChannel)
                                     (runMuxPeer r . fromChannel)
+
+ouroborosProtocols :: (MonadCatch m, MonadAsync m)
+                   => ConnectionId addr
+                   -> ScheduledStop m
+                   -> OuroborosApplication mode addr bytes m a b
+                   -> [MiniProtocol mode bytes m a b]
+ouroborosProtocols connectionId scheduleStop (OuroborosApplication ptcls) =
+    [ MiniProtocol {
+        miniProtocolNum    = miniProtocolNum ptcl,
+        miniProtocolLimits = miniProtocolLimits ptcl,
+        miniProtocolRun    = miniProtocolRun ptcl
+      }
+    | ptcl <- ptcls connectionId scheduleStop ]
+
 
 -- |
 -- Run a @'MuxPeer'@ using either @'runPeer'@ or @'runPipelinedPeer'@.
