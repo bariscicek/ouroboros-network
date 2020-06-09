@@ -63,7 +63,7 @@ data MuxPromise muxMode verionNumber bytes m a b where
       :: forall muxMode versionNumber bytes m a b.
          !(Mux muxMode m)
       -> !(MuxBundle muxMode bytes m a b)
-      -> !(Bundle (StrictTVar m RunOrStop))
+      -> !(Bundle (StrictTVar m ControlMessage))
       -> MuxPromise muxMode versionNumber bytes m a b
 
     MuxStopped
@@ -164,9 +164,9 @@ makeConnectionHandler muxTracer singMuxMode miniProtocolBundle handshakeArgument
             traceWith tracer ConnectionTraceHandshakeSuccess
             !scheduleStopVarBundle
               <- (\a b c -> Bundle (WithHot a) (WithWarm b) (WithEstablished c))
-                  <$> newTVarM Run
-                  <*> newTVarM Run
-                  <*> newTVarM Run
+                  <$> newTVarM Continue
+                  <*> newTVarM Continue
+                  <*> newTVarM Continue
             let muxApp
                   = mkMuxApplicationBundle
                       connectionId
@@ -220,9 +220,9 @@ makeConnectionHandler muxTracer singMuxMode miniProtocolBundle handshakeArgument
             traceWith tracer ConnectionTraceHandshakeSuccess
             !scheduleStopVarBundle
               <- (\a b c -> Bundle (WithHot a) (WithWarm b) (WithEstablished c))
-                  <$> newTVarM Run
-                  <*> newTVarM Run
-                  <*> newTVarM Run
+                  <$> newTVarM Continue
+                  <*> newTVarM Continue
+                  <*> newTVarM Continue
             let muxApp
                   = mkMuxApplicationBundle
                       connectionId

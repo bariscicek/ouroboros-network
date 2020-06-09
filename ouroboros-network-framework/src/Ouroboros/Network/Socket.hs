@@ -240,7 +240,7 @@ connectToNode' sn handshakeCodec versionDataCodec NetworkConnectTracers {nctMuxT
 
          Right app -> do
              traceWith muxTracer $ Mx.MuxTraceHandshakeClientEnd (diffTime ts_end ts_start)
-             Mx.muxStart muxTracer (toApplication connectionId (neverStop (Proxy :: Proxy IO)) app) bearer
+             Mx.muxStart muxTracer (toApplication connectionId (continueForever (Proxy :: Proxy IO)) app) bearer
 
 
 -- Wraps a Socket inside a Snocket and calls connectToNode'
@@ -360,7 +360,7 @@ beginConnection sn muxTracer handshakeTracer handshakeCodec versionDataCodec acc
 
              Right (SomeResponderApplication app) -> do
                  traceWith muxTracer' $ Mx.MuxTraceHandshakeServerEnd
-                 Mx.muxStart muxTracer' (toApplication connectionId (neverStop (Proxy :: Proxy IO)) app) bearer
+                 Mx.muxStart muxTracer' (toApplication connectionId (continueForever (Proxy :: Proxy IO)) app) bearer
       RejectConnection st' _peerid -> pure $ Server.Reject st'
 
 mkListeningSocket

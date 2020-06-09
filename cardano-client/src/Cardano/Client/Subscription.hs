@@ -14,7 +14,7 @@ module Cardano.Client.Subscription (
   , MuxTrace
   , RunMiniProtocol (..)
   , WithMuxBearer
-  , RunOrStop (..)
+  , ControlMessage (..)
   , cChainSyncCodec
   , cStateQueryCodec
   , cTxSubmissionCodec
@@ -30,7 +30,7 @@ import           Network.Mux.Trace (MuxTrace, WithMuxBearer)
 
 import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..),
                      OuroborosApplication, RunMiniProtocol (..),
-                     RunOrStop (..))
+                     ControlMessage (..))
 import           Ouroboros.Network.NodeToClient (ClientSubscriptionParams (..),
                      ConnectionId, LocalAddress,
                      NetworkClientSubcriptionTracers,
@@ -90,7 +90,7 @@ versionedProtocols ::
   -> (BlockNodeToClientVersion blk
       -> ClientCodecs blk m
       -> ConnectionId LocalAddress
-      -> STM m RunOrStop
+      -> STM m ControlMessage
       -> NodeToClientProtocols appType bytes m a b)
   -- ^ callback which recieves codecs, connection id and STM action which can be
   -- checked if the networking runtime system requests the protocols to stop.
