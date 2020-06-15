@@ -79,6 +79,7 @@ instance Condense (ShelleyHash c) where
   condense = show . unShelleyHash
 
 instance Crypto c => ConvertRawHash (ShelleyBlock c) where
+  -- TODO use 'ShortByteString' for 'Hash'
   toRawHash   _ = Crypto.getHash . SL.unHashHeader . unShelleyHash
   fromRawHash _ = ShelleyHash . SL.HashHeader . Crypto.UnsafeHash
   hashSize    _ = fromIntegral $ Crypto.sizeHash (Proxy @(HASH c))

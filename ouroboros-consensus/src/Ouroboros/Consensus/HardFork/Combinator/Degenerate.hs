@@ -365,9 +365,11 @@ instance HasTxs b => HasTxs (DegenFork b) where
   extractTxs = map DTx . extractTxs . unDBlk
 
 instance SingleEraBlock b => ConvertRawHash (DegenFork b) where
-  toRawHash   _ =         toRawHash   (Proxy @(HardForkBlock '[b])) . unDHash
-  fromRawHash _ = DHash . fromRawHash (Proxy @(HardForkBlock '[b]))
-  hashSize    _ =          hashSize   (Proxy @(HardForkBlock '[b]))
+  toRawHash        _ =         toRawHash        (Proxy @(HardForkBlock '[b])) . unDHash
+  fromRawHash      _ = DHash . fromRawHash      (Proxy @(HardForkBlock '[b]))
+  toShortRawHash   _ =         toShortRawHash   (Proxy @(HardForkBlock '[b])) . unDHash
+  fromShortRawHash _ = DHash . fromShortRawHash (Proxy @(HardForkBlock '[b]))
+  hashSize         _ =         hashSize         (Proxy @(HardForkBlock '[b]))
 
 {-------------------------------------------------------------------------------
   Serialisation instances
