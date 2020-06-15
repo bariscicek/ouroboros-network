@@ -56,7 +56,7 @@ module Ouroboros.Consensus.HardFork.Combinator.AcrossEras (
 
 import           Codec.Serialise (Serialise (..))
 import           Control.Monad.Except (throwError)
-import qualified Data.ByteString as Strict
+import           Data.ByteString.Short (ShortByteString)
 import           Data.FingerTree.Strict (Measured (..))
 import           Data.SOP.Strict hiding (shift)
 import           Data.Text (Text)
@@ -123,7 +123,7 @@ newtype OneEraApplyTxErr    xs = OneEraApplyTxErr    { getOneEraApplyTxErr    ::
 -- of the hash would necessarily have to increase, and that leads to trouble.
 -- So, the type parameter @xs@ here is merely a phantom one, and we just store
 -- the underlying raw hash.
-newtype OneEraHash (xs :: [k]) = OneEraHash { getOneEraHash :: Strict.ByteString }
+newtype OneEraHash (xs :: [k]) = OneEraHash { getOneEraHash :: ShortByteString }
   deriving newtype (Eq, Ord, Show, NoUnexpectedThunks, Serialise)
 
 {-------------------------------------------------------------------------------
@@ -233,7 +233,7 @@ instance CanHardFork xs => HasHeader (OneEraHeader xs) where
    where
      getOneHash :: forall blk. SingleEraBlock blk
                 => Header blk -> OneEraHash xs
-     getOneHash = OneEraHash . toRawHash (Proxy @blk) . blockHash
+     getOneHash = OneEraHash . toShortRawHash (Proxy @blk) . blockHash
 
   blockPrevHash = hcollapse
                 . hcmap proxySingle (K . getOnePrev)
@@ -244,7 +244,7 @@ instance CanHardFork xs => HasHeader (OneEraHeader xs) where
       getOnePrev hdr =
           case blockPrevHash hdr of
             GenesisHash -> GenesisHash
-            BlockHash h -> BlockHash (OneEraHash $ toRawHash (Proxy @blk) h)
+            BlockHash h -> BlockHash (OneEraHash $ toShortRawHash (Proxy @blk) h)
 
   blockSlot = hcollapse . hcmap proxySingle (K . blockSlot) . getOneEraHeader
   blockNo   = hcollapse . hcmap proxySingle (K . blockNo)   . getOneEraHeader

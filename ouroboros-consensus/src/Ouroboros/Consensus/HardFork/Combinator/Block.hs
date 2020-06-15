@@ -161,9 +161,9 @@ instance CanHardFork xs => HasNestedContent Header (HardForkBlock xs) where
 -------------------------------------------------------------------------------}
 
 instance CanHardFork xs => ConvertRawHash (HardForkBlock xs) where
-  toRawHash   _ = getOneEraHash
-  fromRawHash _ = OneEraHash
-  hashSize    _ = getSameValue hashSizes
+  toShortRawHash   _ = getOneEraHash
+  fromShortRawHash _ = OneEraHash
+  hashSize         _ = getSameValue hashSizes
     where
       hashSizes :: NP (K Word32) xs
       hashSizes = hcpure proxySingle hashSizeOne
@@ -192,8 +192,8 @@ instance CanHardFork xs => HasAnnTip (HardForkBlock xs) where
       tipInfoOne :: forall blk. SingleEraBlock blk
                  => WrapTipInfo blk -> OneEraHash xs
       tipInfoOne = OneEraHash
-                 . toRawHash   (Proxy @blk)
-                 . tipInfoHash (Proxy @blk)
+                 . toShortRawHash (Proxy @blk)
+                 . tipInfoHash    (Proxy @blk)
                  . unwrapTipInfo
 
 {-------------------------------------------------------------------------------
