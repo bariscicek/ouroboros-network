@@ -171,6 +171,15 @@ pattern CardanoNodeToNodeVersion2 =
       :* Nil
       )
 
+pattern CardanoNodeToNodeVersion3 :: BlockNodeToNodeVersion (CardanoBlock sc)
+pattern CardanoNodeToNodeVersion3 =
+    HardForkNodeToNodeEnabled (
+         WrapNodeToNodeVersion ByronNodeToNodeVersion2
+      :* WrapNodeToNodeVersion ShelleyNodeToNodeVersion1
+      :* Nil
+      )
+
+
 -- | We support Byron V1 with hard fork disabled, as it was released before
 -- the hard fork
 pattern CardanoNodeToClientVersion1 :: BlockNodeToClientVersion (CardanoBlock sc)
@@ -195,6 +204,7 @@ instance TPraosCrypto sc => TranslateNetworkProtocolVersion (CardanoBlock sc) wh
   supportedNodeToNodeVersions _ = NE.fromList $
       [ CardanoNodeToNodeVersion1
       , CardanoNodeToNodeVersion2
+      , CardanoNodeToNodeVersion3
       ]
 
   supportedNodeToClientVersions _ = NE.fromList $
@@ -209,6 +219,7 @@ instance TPraosCrypto sc => TranslateNetworkProtocolVersion (CardanoBlock sc) wh
   nodeToNodeProtocolVersion _ = \case
       CardanoNodeToNodeVersion1 -> NodeToNodeV_1
       CardanoNodeToNodeVersion2 -> NodeToNodeV_2
+      CardanoNodeToNodeVersion3 -> NodeToNodeV_3
       v                         -> error $ "unsupported version: " <> show v
 
   nodeToClientProtocolVersion _ = \case
