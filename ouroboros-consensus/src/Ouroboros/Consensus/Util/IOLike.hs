@@ -22,6 +22,7 @@ module Ouroboros.Consensus.Util.IOLike (
   , MonadAsyncSTM(..)
   , MonadAsync(..)
   , ExceptionInLinkedThread(..)
+  , isCancel
   , link
   , linkTo
     -- *** MonadST

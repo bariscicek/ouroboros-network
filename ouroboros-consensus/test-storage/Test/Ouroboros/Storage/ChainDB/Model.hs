@@ -457,8 +457,8 @@ addBlockPromise cfg blk m = (result, m')
     blockWritten = Map.notMember (Block.blockHash blk) (blocks m)
                 && Map.member    (Block.blockHash blk) (blocks m')
     result = AddBlockPromise
-      { blockWrittenToDisk = return blockWritten
-      , blockProcessed     = return $ tipPoint m'
+      { blockWrittenToDisk = return $ Right blockWritten
+      , blockProcessed     = return $ Right $ tipPoint m'
       }
 
 {-------------------------------------------------------------------------------

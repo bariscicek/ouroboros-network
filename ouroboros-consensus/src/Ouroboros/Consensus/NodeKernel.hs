@@ -407,10 +407,8 @@ forkBlockProduction maxTxCapacityOverride IS{..} BlockProduction{..} =
                   newBlock
                   (snapshotMempoolSize mempoolSnapshot)
 
-        -- Add the block to the chain DB
-        result <- lift $ ChainDB.addBlockAsync chainDB newBlock
-        -- Block until we have processed the block
-        curTip <- lift $ atomically $ ChainDB.blockProcessed result
+        -- Add the block to the chain DB and block until we have processed it
+        curTip <- lift $ ChainDB.addBlock chainDB newBlock
 
         -- Check whether we adopted our block
         when (curTip /= blockPoint newBlock) $ do
