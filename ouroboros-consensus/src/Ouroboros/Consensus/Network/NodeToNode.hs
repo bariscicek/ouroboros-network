@@ -131,6 +131,7 @@ data Handlers m peer blk = Handlers {
 
     , hKeepAliveClient
         :: BlockNodeToNodeVersion blk
+        -> ScheduledStop m
         -> peer
         -> (StrictTVar m (M.Map peer PeerGSV))
         -> KeepAliveInterval
@@ -376,10 +377,10 @@ data Apps m peer blk bCS bBF bTX bKA a = Apps {
     , aTxSubmissionServer :: BlockNodeToNodeVersion blk -> peer -> Channel m bTX -> m (a, Maybe bTX)
 
       -- | Start a keep-alive client.
-    , aKeepAliveClient :: BlockNodeToNodeVersion blk -> peer -> Channel m bKA -> m a
+    , aKeepAliveClient :: BlockNodeToNodeVersion blk -> peer -> Channel m bKA -> m (a, Maybe bKA)
 
       -- | Start a keep-alive server.
-    , aKeepAliveServer :: BlockNodeToNodeVersion blk -> peer -> Channel m bKA -> m a
+    , aKeepAliveServer :: BlockNodeToNodeVersion blk -> peer -> Channel m bKA -> m (a, Maybe bKA)
     }
 
 -- | Construct the 'NetworkApplication' for the node-to-node protocols
@@ -517,7 +518,7 @@ mkApps kernel Tracers {..} Codecs {..} genChainSyncTimeout Handlers {..} =
       :: BlockNodeToNodeVersion blk
       -> remotePeer
       -> Channel m bKA
-      -> m ()
+      -> m ((), Maybe bKA)
     aKeepAliveClient version them channel = do
       labelThisThread "KeepAliveClient"
       startTs <- newTVarM Nothing
@@ -525,8 +526,8 @@ mkApps kernel Tracers {..} Codecs {..} genChainSyncTimeout Handlers {..} =
           kacApp = case version' of
                         -- Version 1 doesn't support keep alive protocol but Blockfetch
                         -- still requires a PeerGSV per peer.
-                        NodeToNodeV_1 -> \_ -> forever (threadDelay 1000) >> return ()
-                        NodeToNodeV_2 -> \_ -> forever (threadDelay 1000) >> return ()
+                        NodeToNodeV_1 -> \_ -> forever (threadDelay 1000) >> return ((), Nothing)
+                        NodeToNodeV_2 -> \_ -> forever (threadDelay 1000) >> return ((), Nothing)
                         _             -> \dqCtx -> do
                           runPeerWithLimits
                             nullTracer
@@ -535,7 +536,8 @@ mkApps kernel Tracers {..} Codecs {..} genChainSyncTimeout Handlers {..} =
                             timeLimitsKeepAlive
                             channel
                             $ keepAliveClientPeer
-                            $ hKeepAliveClient version them dqCtx (KeepAliveInterval 10) startTs
+                            $ hKeepAliveClient version (neverStop (Proxy :: Proxy m)) them dqCtx
+                                (KeepAliveInterval 10) startTs
 
       bracketKeepAliveClient (getFetchClientRegistry kernel) them kacApp
 
@@ -543,7 +545,7 @@ mkApps kernel Tracers {..} Codecs {..} genChainSyncTimeout Handlers {..} =
       :: BlockNodeToNodeVersion blk
       -> remotePeer
       -> Channel m bKA
-      -> m ()
+      -> m ((), Maybe bKA)
     aKeepAliveServer _version _them channel = do
       labelThisThread "KeepAliveServer"
       runPeerWithLimits
