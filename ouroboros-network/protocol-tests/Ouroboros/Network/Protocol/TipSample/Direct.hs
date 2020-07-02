@@ -47,13 +47,13 @@ directStIdle (SendMsgFollowTip n handleTips) ServerStIdle { handleFollowTip } =
     go handleTips (handleFollowTip n)
   where
     go :: HandleTips n tip m a
-       -> FollowTip n tip m b
+       -> SendTips n tip m b
        -> m (a, b)
-    go (ReceiveTip k) (NextTip _ mFollowTip) = do
+    go (ReceiveTip k) (SendNextTip _ mFollowTip) = do
       (tip, followTip) <- mFollowTip
       receiveTip <- k tip
       go receiveTip followTip
-    go (ReceiveLastTip k) (LastTip _ mFollowTip) = do
+    go (ReceiveLastTip k) (SendLastTip _ mFollowTip) = do
       (tip, serverIdle) <- mFollowTip
       clientIdle <- k tip
       directStIdle clientIdle serverIdle
