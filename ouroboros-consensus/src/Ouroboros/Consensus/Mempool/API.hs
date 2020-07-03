@@ -27,6 +27,7 @@ import           Data.Word (Word32)
 
 import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSizeInBytes)
 
+import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Util.IOLike
@@ -250,7 +251,7 @@ data ForgeLedgerState blk =
     -- This will only be the case when we realized that we are the slot leader
     -- and we are actually producing a block. It is the caller's responsibility
     -- to call 'applyChainTick' and produce the ticked ledger state.
-    ForgeInKnownSlot (TickedLedgerState blk)
+    ForgeInKnownSlot SlotNo (TickedLedgerState blk)
 
     -- | The slot number of the block is not yet known
     --

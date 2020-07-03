@@ -28,6 +28,7 @@ data BlockProduction m blk = BlockProduction {
       -- | Check if we should produce a block
       getLeaderProof_ :: HasCallStack
                       => Tracer m (ForgeState blk)
+                      -> SlotNo
                       -> Ticked (LedgerView    (BlockProtocol blk))
                       -> Ticked (ChainDepState (BlockProtocol blk))
                       -> m (LeaderCheck        (BlockProtocol blk))
@@ -53,6 +54,7 @@ data BlockProduction m blk = BlockProduction {
 getLeaderProof :: HasCallStack
                => BlockProduction m blk
                -> Tracer m (ForgeState blk)
+               -> SlotNo
                -> Ticked (LedgerView    (BlockProtocol blk))
                -> Ticked (ChainDepState (BlockProtocol blk))
                -> m (LeaderCheck        (BlockProtocol blk))
@@ -93,16 +95,17 @@ defaultGetLeaderProof ::
   -> MaintainForgeState m blk
   -> StrictMVar m (ForgeState blk)
   -> Tracer m (ForgeState blk)
+  -> SlotNo
   -> Ticked (LedgerView (BlockProtocol blk))
   -> Ticked (ChainDepState (BlockProtocol blk))
   -> m (LeaderCheck (BlockProtocol blk))
-defaultGetLeaderProof cfg proof mfs varForgeState tracer lgrSt chainDepSt = do
+defaultGetLeaderProof cfg proof mfs varForgeState tracer slot lgrSt chainDepSt = do
     forgeState' <- modifyMVar varForgeState $ \forgeState -> do
       forgeState' <-
         updateForgeState
           mfs
           (configIndep cfg)
-          (tickedSlotNo lgrSt)
+          slot
           forgeState
       return (forgeState', forgeState')
     traceWith tracer forgeState'
@@ -110,5 +113,6 @@ defaultGetLeaderProof cfg proof mfs varForgeState tracer lgrSt chainDepSt = do
       (configConsensus cfg)
       proof
       (chainIndepState forgeState')
+      slot
       lgrSt
       chainDepSt

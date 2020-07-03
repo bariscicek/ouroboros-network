@@ -6,7 +6,7 @@ module Ouroboros.Consensus.Ledger.SupportsProtocol (
   , ledgerViewForecastAtTip
   ) where
 
-import           Control.Monad.Except
+--import           Control.Monad.Except
 import           GHC.Stack (HasCallStack)
 
 import           Ouroboros.Consensus.Block
@@ -14,7 +14,6 @@ import           Ouroboros.Consensus.Forecast
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Protocol.Abstract
-import           Ouroboros.Consensus.Ticked
 
 -- | Link protocol to ledger
 class ( BlockSupportsProtocol blk
@@ -25,6 +24,15 @@ class ( BlockSupportsProtocol blk
   protocolLedgerView :: LedgerConfig blk
                      -> LedgerState blk
                      -> LedgerView (BlockProtocol blk)
+
+  -- | Extract /ticked/ ledger view
+  --
+  -- TODO: docs (in particular, invariant)
+  -- TODO: is 'protocolLedgerView' still required?
+  -- TODO: should the forecast give us a ticked ledger view?
+  protocolTickedView :: LedgerConfig blk
+                     -> Ticked (LedgerState blk)
+                     -> Ticked (LedgerView (BlockProtocol blk))
 
   -- | Get a (historical) forecast at the given slot
   --
@@ -88,6 +96,7 @@ ledgerViewForecastAtTip cfg st =
 -- > == view
 --
 -- This should be true for each ledger because consensus depends on it.
+{-
 _lemma_ledgerViewForecastAt_applyChainTick
   :: (LedgerSupportsProtocol blk, Eq (LedgerView (BlockProtocol blk)))
   => LedgerConfig blk
@@ -112,3 +121,4 @@ _lemma_ledgerViewForecastAt_applyChainTick cfg st forecast for
       ]
     | otherwise
     = Right ()
+-}

@@ -4,17 +4,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module Ouroboros.Consensus.HardFork.Combinator.Protocol.LedgerView (
     -- * Hard fork
     HardForkLedgerView_(..)
   , HardForkLedgerView
+    -- * Type family instances
+  , Ticked(..)
   ) where
 
 import           Data.SOP.Dict
 import           Data.SOP.Strict
 import           Data.Void
 
+import           Ouroboros.Consensus.Ticked
 import           Ouroboros.Consensus.TypeFamilyWrappers
 
 import           Ouroboros.Consensus.HardFork.Combinator.Abstract
@@ -38,6 +43,15 @@ data HardForkLedgerView_ f xs = HardForkLedgerView {
 deriving instance CanHardFork xs => Show (HardForkLedgerView_ WrapLedgerView xs)
 
 type HardForkLedgerView = HardForkLedgerView_ WrapLedgerView
+
+{-------------------------------------------------------------------------------
+  Ticked
+-------------------------------------------------------------------------------}
+
+data instance Ticked (HardForkLedgerView_ f xs) = TickedHardForkLedgerView {
+      tickedHardForkLedgerViewTransition :: TransitionInfo
+    , tickedHardForkLedgerViewPerEra     :: HardForkState_ (K Void) (Ticked :.: f) xs
+    }
 
 {-------------------------------------------------------------------------------
   Show instance for the benefit of tests

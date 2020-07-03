@@ -12,10 +12,12 @@ import           Data.Word (Word32)
 import           GHC.Stack (HasCallStack)
 
 import           Ouroboros.Consensus.Ledger.Abstract
+import           Ouroboros.Consensus.Ticked
 import           Ouroboros.Consensus.Util.IOLike
 
 class ( UpdateLedger blk
       , NoUnexpectedThunks (GenTx blk)
+      , NoUnexpectedThunks (Ticked (LedgerState blk))
       , Show (GenTx blk)
       , Show (ApplyTxErr blk)
       ) => LedgerSupportsMempool blk where

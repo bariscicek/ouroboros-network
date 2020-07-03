@@ -15,6 +15,8 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
+{-# OPTIONS_GHC -Wwarn #-}
+
 {-# OPTIONS_GHC -fno-strictness #-}
 -- NOTE: With @-fstrictness@ optimisation (enabled by default for -O1), we get
 -- an unexplained thunk in 'KnownIntersectionState' and thus a space leak. See
@@ -731,7 +733,7 @@ chainSyncClient mkPipelineDecision0 tracer cfg
               Right lv ->
                 -- Forecasting is equivalent to ticking
                 -- ('lemma_ledgerViewForecastAt_applyChainTick' )
-                return (Ticked (realPointSlot hdrPoint) lv)
+                undefined -- return (Ticked (realPointSlot hdrPoint) lv)
       where
         hdrPoint = headerRealPoint hdr
 

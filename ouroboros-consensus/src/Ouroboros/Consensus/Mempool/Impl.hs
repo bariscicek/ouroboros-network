@@ -42,7 +42,6 @@ import           Ouroboros.Consensus.Mempool.API
 import           Ouroboros.Consensus.Mempool.TxSeq (TicketNo, TxSeq (..),
                      TxTicket (..), zeroTicketNo)
 import qualified Ouroboros.Consensus.Mempool.TxSeq as TxSeq
-import           Ouroboros.Consensus.Ticked
 import           Ouroboros.Consensus.Util (repeatedly)
 import           Ouroboros.Consensus.Util.IOLike
 import           Ouroboros.Consensus.Util.ResourceRegistry
@@ -195,7 +194,7 @@ data InternalState blk = IS {
 
 deriving instance ( NoUnexpectedThunks (GenTx blk)
                   , NoUnexpectedThunks (GenTxId blk)
-                  , NoUnexpectedThunks (LedgerState blk)
+                  , NoUnexpectedThunks (Ticked (LedgerState blk))
                   , StandardHash blk
                   , Typeable blk
                   ) => NoUnexpectedThunks (InternalState blk)
@@ -218,14 +217,15 @@ initInternalState
   :: LedgerSupportsMempool blk
   => MempoolCapacityBytesOverride
   -> TicketNo  -- ^ Used for 'isLastTicketNo'
+  -> SlotNo
   -> TickedLedgerState blk
   -> InternalState blk
-initInternalState capacityOverride lastTicketNo st = IS {
+initInternalState capacityOverride lastTicketNo slot st = IS {
       isTxs          = TxSeq.Empty
     , isTxIds        = Set.empty
     , isLedgerState  = st
-    , isTip          = ledgerTipHash $ tickedState st
-    , isSlotNo       = tickedSlotNo st
+    , isTip          = castHash (getTipHash st)
+    , isSlotNo       = slot
     , isLastTicketNo = lastTicketNo
     , isCapacity     = computeMempoolCapacity st capacityOverride
     }
@@ -243,8 +243,8 @@ initMempoolEnv :: ( IOLike m
                -> m (MempoolEnv m blk)
 initMempoolEnv ledgerInterface cfg capacityOverride tracer txSize = do
     st <- atomically $ getCurrentLedgerState ledgerInterface
-    let st' = tickLedgerState cfg (ForgeInUnknownSlot st)
-    isVar <- newTVarM $ initInternalState capacityOverride zeroTicketNo st'
+    let (slot, st') = tickLedgerState cfg (ForgeInUnknownSlot st)
+    isVar <- newTVarM $ initInternalState capacityOverride zeroTicketNo slot st'
     return MempoolEnv
       { mpEnvLedger           = ledgerInterface
       , mpEnvLedgerCfg        = cfg
@@ -293,7 +293,7 @@ forkSyncStateOnTipPointChange registry menv =
     -- Using the tip ('Point') allows for quicker equality checks
     getCurrentTip :: STM m (Point blk)
     getCurrentTip =
-          ledgerTipPoint' (Proxy @blk)
+          ledgerTipPoint (Proxy @blk)
       <$> getCurrentLedgerState (mpEnvLedger menv)
 
 {-------------------------------------------------------------------------------
@@ -408,10 +408,11 @@ implRemoveTxs mpEnv txIds = do
       let txTickets' = filter
               ((`notElem` toRemove) . txId . txTicketTx)
               (TxSeq.toList isTxs)
-          ticked = tickLedgerState cfg (ForgeInUnknownSlot st)
+          (slot, ticked) = tickLedgerState cfg (ForgeInUnknownSlot st)
           vr = revalidateTxsFor
             capacityOverride
             cfg
+            slot
             ticked
             isLastTicketNo
             txTickets'
@@ -734,14 +735,20 @@ validateStateFor
   -> InternalState    blk
   -> ValidationResult blk
 validateStateFor capacityOverride cfg blockLedgerState is
-    | isTip    == ledgerTipHash (tickedState st')
-    , isSlotNo == tickedSlotNo st'
+    | isTip    == castHash (getTipHash st')
+    , isSlotNo == slot
     = validationResultFromIS is
     | otherwise
-    = revalidateTxsFor capacityOverride cfg st' isLastTicketNo (TxSeq.toList isTxs)
+    = revalidateTxsFor
+        capacityOverride
+        cfg
+        slot
+        st'
+        isLastTicketNo
+        (TxSeq.toList isTxs)
   where
     IS { isTxs, isTip, isSlotNo, isLastTicketNo } = is
-    st' = tickLedgerState cfg blockLedgerState
+    (slot, st') = tickLedgerState cfg blockLedgerState
 
 -- | Revalidate the given transactions (@['TxTicket' ('GenTx' blk)]@), which
 -- are /all/ the transactions in the Mempool against the given ticked ledger
@@ -750,28 +757,29 @@ revalidateTxsFor
   :: (LedgerSupportsMempool blk, HasTxId (GenTx blk))
   => MempoolCapacityBytesOverride
   -> LedgerConfig blk
+  -> SlotNo
   -> TickedLedgerState blk
   -> TicketNo
      -- ^ 'isLastTicketNo' & 'vrLastTicketNo'
   -> [TxTicket (GenTx blk)]
   -> ValidationResult blk
-revalidateTxsFor capacityOverride cfg st lastTicketNo txTickets =
+revalidateTxsFor capacityOverride cfg slot st lastTicketNo txTickets =
     repeatedly
       (extendVRPrevApplied cfg)
       txTickets
       (validationResultFromIS is)
   where
-    is = initInternalState capacityOverride lastTicketNo st
+    is = initInternalState capacityOverride lastTicketNo slot st
 
 -- | Tick the 'LedgerState' using the given 'BlockSlot'.
 tickLedgerState
   :: forall blk. (UpdateLedger blk, ValidateEnvelope blk)
-  => LedgerConfig      blk
-  -> ForgeLedgerState  blk
-  -> TickedLedgerState blk
-tickLedgerState _cfg (ForgeInKnownSlot   st) = st
+  => LedgerConfig     blk
+  -> ForgeLedgerState blk
+  -> (SlotNo, TickedLedgerState blk)
+tickLedgerState _cfg (ForgeInKnownSlot slot st) = (slot, st)
 tickLedgerState  cfg (ForgeInUnknownSlot st) =
-    applyChainTick cfg slot st
+    (slot, applyChainTick cfg slot st)
   where
     -- Optimistically assume that the transactions will be included in a block
     -- in the next available slot

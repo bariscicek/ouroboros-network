@@ -33,14 +33,13 @@ import           Cardano.Prelude (NoUnexpectedThunks)
 
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.SupportsMempool
-import           Ouroboros.Consensus.Ticked
 import           Ouroboros.Consensus.TypeFamilyWrappers
 
 import           Ouroboros.Consensus.HardFork.Combinator.Abstract
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
 import           Ouroboros.Consensus.HardFork.Combinator.Basics
 import           Ouroboros.Consensus.HardFork.Combinator.Info
-import           Ouroboros.Consensus.HardFork.Combinator.Ledger ()
+import           Ouroboros.Consensus.HardFork.Combinator.Ledger (Ticked (..))
 import           Ouroboros.Consensus.HardFork.Combinator.PartialConfig
 import qualified Ouroboros.Consensus.HardFork.Combinator.State as State
 import qualified Ouroboros.Consensus.HardFork.Combinator.Util.Match as Match
@@ -78,18 +77,17 @@ instance CanHardFork xs => LedgerSupportsMempool (HardForkBlock xs) where
   applyTx   = applyHelper applyTx
   reapplyTx = applyHelper reapplyTx
 
-  maxTxCapacity (Ticked slot st) =
-      hcollapse
-    . hcmap proxySingle (K . maxTxCapacity . Ticked slot)
-    . State.tip
-    . getHardForkLedgerState
-    $ st
+  maxTxCapacity =
+        hcollapse
+      . hcmap proxySingle (K . maxTxCapacity . unComp)
+      . State.tip
+      . tickedHardForkLedgerStatePerEra
 
   txInBlockSize =
-      hcollapse
-    . hcmap proxySingle (K . txInBlockSize)
-    . getOneEraGenTx
-    . getHardForkGenTx
+        hcollapse
+      . hcmap proxySingle (K . txInBlockSize)
+      . getOneEraGenTx
+      . getHardForkGenTx
 
 applyHelper
   :: forall xs. CanHardFork xs
@@ -104,19 +102,24 @@ applyHelper
   -> TickedLedgerState (HardForkBlock xs)
   -> Except (HardForkApplyTxErr xs) (TickedLedgerState (HardForkBlock xs))
 applyHelper apply
-            hardForkConfig@HardForkLedgerConfig{..}
+            HardForkLedgerConfig{..}
             (HardForkGenTx (OneEraGenTx hardForkTx))
-            (Ticked slot (HardForkLedgerState hardForkState)) =
-    case State.match hardForkTx (hmap (Comp . Ticked slot) hardForkState) of
+            (TickedHardForkLedgerState transition hardForkState) =
+    case State.match hardForkTx hardForkState of
       Left mismatch ->
         throwError $ HardForkApplyTxErrWrongEra . MismatchEraInfo $
           Match.bihcmap proxySingle singleEraInfo ledgerInfo mismatch
       Right matched ->
-        fmap (fmap HardForkLedgerState . State.sequence) $ hsequence' $
+        -- The 'TransitionInfo' cannot change halfway a block
+        -- TODO: That needs a better explanation
+        fmap (TickedHardForkLedgerState transition) $ hsequence' $
           hczipWith3 proxySingle applyCurrent cfgs errInjections matched
   where
     cfgs = getPerEraLedgerConfig hardForkLedgerConfigPerEra
-    ei   = State.epochInfoLedger hardForkConfig hardForkState
+    ei   = State.epochInfoPrecomputedTransitionInfo
+             hardForkLedgerConfigShape
+             transition
+             hardForkState
 
     errInjections :: NP (Injection WrapApplyTxErr xs) xs
     errInjections = injections

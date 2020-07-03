@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
 
 module Ouroboros.Consensus.HardFork.Combinator.State.Types (
     -- * Main types
@@ -17,6 +18,8 @@ import           Prelude hiding (sequence)
 
 import           Data.Word
 import           GHC.Generics (Generic)
+
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HardFork.History (Bound)
@@ -143,4 +146,4 @@ data TransitionInfo =
     --   we cannot look past the safe zone of this era and hence, by definition,
     --   the transition to the /next/ era cannot happen.
   | TransitionImpossible
-  deriving (Show)
+  deriving (Show, Generic, NoUnexpectedThunks)
