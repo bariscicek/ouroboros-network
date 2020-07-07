@@ -56,6 +56,7 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTime
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
+import qualified Control.Monad.Fail as Fail (MonadFail(..))
 
 import           Network.Mux.Channel
 import           Network.Mux.Egress  as Egress
@@ -435,6 +436,10 @@ muxChannel tracer egressQueue want@(Wanton w) mc md q =
     perMiniProtocolBufferSize :: Int64
     perMiniProtocolBufferSize = 0x3ffff
 
+    #if !(MIN_VERSION_base(4,13,0))
+        fail = Fail.fail
+        {-# INLINE fail #-}
+    #endif
     send :: BL.ByteString -> m ()
     send encoding = do
         -- We send CBOR encoded messages by encoding them into by ByteString
